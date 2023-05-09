@@ -1,0 +1,11 @@
+relationship,label,precision,recall,fscore
+occlusion,0,1.0,0.5,0.6666666666666666
+occlusion,1,1.0,0.5,0.6666666666666666
+occlusion,2,0.5,0.5,0.5
+occlusion,3,0.0,0.0,0.0
+occlusion,all,0.75,0.5,0.6
+distance,0,1.0,0.5,0.6666666666666666
+distance,1,0.0,0.0,0.0
+distance,2,1.0,1.0,1.0
+distance,3,0.5,0.5,0.5
+distance,all,0.75,0.5,0.6
