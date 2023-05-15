@@ -3,7 +3,8 @@ import os
 import shutil
 import random
 import subprocess
-
+os.chdir('C:/Users/UTENTE/Dropbox/PC/Documents/GitHub/2.5VRD-VisualKnowledge/visual_relationship/preprocessing/')
+print (os.getcwd() )
 # generate list containing the images id to download using downloader.py
 def generate_image_list(type_csv: str, train_pct=1.0):
     if type_csv == "train":
@@ -83,9 +84,8 @@ def create_data_subset():
             shutil.copy("../2.5VRD_data/" + csv_file, folder_path)
 
 
-'''
+
 generate_image_list("train", 0.1)
 generate_image_list("validation")
 generate_image_list("test")
 create_data_subset()
-'''
