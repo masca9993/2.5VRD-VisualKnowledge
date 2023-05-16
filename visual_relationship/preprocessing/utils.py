@@ -60,7 +60,6 @@ def create_data_subset():
     keep_list = os.listdir("../images/images_train")
     keep_list = [f.split('.')[0] for f in keep_list]
 
-    # remove rows where City is in the list of cities to remove
     within_image_objects_train = within_image_objects_train[within_image_objects_train['image_id'].isin(keep_list)]
     across_images_objects_train = across_images_objects_train[across_images_objects_train['image_id'].isin(keep_list)]
     within_image_vrd_train = within_image_vrd_train[within_image_vrd_train['image_id_1'].isin(keep_list)]
@@ -83,9 +82,7 @@ def create_data_subset():
             shutil.copy("../2.5VRD_data/" + csv_file, folder_path)
 
 
-'''
-generate_image_list("train", 0.1)
+
 generate_image_list("validation")
 generate_image_list("test")
 create_data_subset()
-'''
