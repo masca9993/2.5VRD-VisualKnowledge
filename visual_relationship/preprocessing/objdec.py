@@ -9,11 +9,11 @@ with open('C:/Users/UTENTE/Dropbox/PC/Desktop/coco.names.txt', 'r') as f:
     classes = [line.strip() for line in f.readlines()]
 
 # Load the image you want to detect objects in
-image = cv2.imread('C:/Users/UTENTE/Dropbox/PC/Desktop/Georgia5and120loop.jpg')
+image = cv2.imread('C:/Users/UTENTE/Dropbox/PC/Documents/GitHub/2.5VRD-VisualKnowledge/visual_relationship/images/images_train/00a1b0bce50cbbee.jpg')
 
-'''
+
 # Set the input size of the model
-input_size = (1664, 1664)
+input_size = (416, 416)
 
 # Create a blob from the image
 blob = cv2.dnn.blobFromImage(image, 1/255.0, input_size, swapRB=True, crop=False)
@@ -39,7 +39,7 @@ for out in outs:
         scores = detection[5:]
         class_id = np.argmax(scores)
         confidence = scores[class_id]
-        if confidence > 0.2:
+        if confidence > 0.5:
             center_x = int(detection[0] * image.shape[1])
             center_y = int(detection[1] * image.shape[0])
             width = int(detection[2] * image.shape[1])
@@ -71,8 +71,8 @@ for i in indices:
 cv2.imshow("Object Detection", image)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
-'''
 
+'''
 # Set the input size of the model
 input_size = (1664, 1664)
 
@@ -130,7 +130,7 @@ cv2.imshow("Object Detection", image)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
 '''
-
+'''
 # Get the coordinates of the POV
 pov_x, pov_y = (-100, -100)  # Replace with the actual coordinates of the POV
 
