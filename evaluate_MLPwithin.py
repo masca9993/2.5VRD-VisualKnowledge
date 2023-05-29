@@ -1,5 +1,5 @@
 import pandas as pd
-from models import MLP_within
+from models import MLP_within2
 from sklearn.metrics import f1_score
 import torch
 import torch.nn as nn
@@ -8,82 +8,129 @@ from torch.utils.data import DataLoader
 from utils import prepare_dataset
 from sklearn.metrics import confusion_matrix
 
-learning_rate = 0.001
-batch_size = 32
-epochs = 70
+
+def run_MLPwithin(train, y_train, val, y_val, test, y_test):
+
+    learning_rate = 0.001
+    batch_size = 128
+    epochs = 100
+    best_f1_dis = 0.0
+    best_f1_occ = 0.0
+    patience = 10
+    counter_dis = 0
+    counter_occ = 0
+    early_stop_dis = False
+    early_stop_occ = False
+
+    train_dataset = torch.utils.data.TensorDataset(train, y_train)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+
+    distance_within_model = MLP_within2(train.shape[1])
+    occlusion_within_model = MLP_within2(train.shape[1])
+
+    loss_dis = nn.CrossEntropyLoss()
+    loss_occ = nn.CrossEntropyLoss()
+    optimizer_distance = optim.Adam(distance_within_model.parameters())
+    optimizer_occlusion = optim.Adam(occlusion_within_model.parameters())
 
 
-objects_within_train = pd.read_csv("visual_relationship/subset_data/within_image_objects_train.csv")
-vrd_within_train = pd.read_csv("visual_relationship/subset_data/within_image_vrd_train.csv")
-objects_within_validation = pd.read_csv("visual_relationship/subset_data/within_image_objects_validation.csv")
-vrd_within_validation = pd.read_csv("visual_relationship/subset_data/within_image_vrd_validation.csv")
-objects_within_test = pd.read_csv("visual_relationship/subset_data/within_image_objects_test.csv")
-vrd_within_test = pd.read_csv("visual_relationship/subset_data/within_image_vrd_test.csv")
+    # Perform the training loop
+    for epoch in range(epochs):
+        epoch_loss_dis = 0.0
+        epoch_loss_occ = 0.0
+        epoch_f1score_distance = 0.0
+        epoch_f1score_occlusion = 0.0
 
-train, y_train, train_ids = prepare_dataset(vrd_within_train, objects_within_train)
-val, y_val, val_ids = prepare_dataset(vrd_within_validation, objects_within_validation)
-test, y_test, test_ids = prepare_dataset(vrd_within_test, objects_within_test)
+        distance_within_model.train()
+        occlusion_within_model.train()
 
-train_dataset = torch.utils.data.TensorDataset(train, y_train)
-train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+        if not early_stop_dis:
 
-within_model = MLP_within(train.shape[1])
+            for inputs, labels in train_loader:
+                optimizer_distance.zero_grad()
 
-loss_fn = nn.CrossEntropyLoss()
-optimizer = optim.Adam(within_model.parameters())
+                dis_logits, dis_train_pred = distance_within_model(inputs)
+                loss_distance = loss_dis(dis_train_pred, labels[:, 0])
 
-train_distance_f1scores = []
-train_occlusion_f1scores = []
+                loss_distance.backward()
+                optimizer_distance.step()
 
-# Perform the training loop
-for epoch in range(epochs):
-    epoch_loss_avg = 0.0
-    epoch_f1score_distance = 0.0
-    epoch_f1score_occlusion = 0.0
+                epoch_loss_dis += loss_distance.item()
 
-    within_model.train()
+                predicted_distance_labels = torch.argmax(dis_train_pred, dim=1)
+                f1_distance = f1_score(labels[:, 0], predicted_distance_labels, average='weighted')
+                epoch_f1score_distance += f1_distance
 
-    # Iterate over the training data in batches
-    for inputs, labels in train_loader:
-        optimizer.zero_grad()
+        if not early_stop_occ:
 
-        dis_logits, dis_train_pred, occ_logits, occ_train_pred = within_model(inputs)
-        loss_distance = loss_fn(dis_logits, labels[:, 0])
-        loss_occlusion = loss_fn(occ_logits, labels[:, 1])
-        loss = loss_distance + loss_occlusion
+            for inputs, labels in train_loader:
+                optimizer_occlusion.zero_grad()
 
-        loss.backward()
-        optimizer.step()
+                occ_logits, occ_train_pred = occlusion_within_model(inputs)
+                loss_occlusion = loss_occ(occ_train_pred, labels[:, 1])
 
-        # Track progress
-        epoch_loss_avg += loss.item()
+                loss_occlusion.backward()
+                optimizer_occlusion.step()
 
-        predicted_distance_labels = torch.argmax(dis_train_pred, dim=1)
-        predicted_occlusion_labels = torch.argmax(occ_train_pred, dim=1)
-        f1_distance = f1_score(labels[:, 0], predicted_distance_labels, average='weighted')
-        f1_occlusion = f1_score(labels[:, 1], predicted_occlusion_labels, average='weighted')
-        epoch_f1score_distance += f1_distance
-        epoch_f1score_occlusion += f1_occlusion
+                epoch_loss_occ += loss_occlusion.item()
 
-    # Save train epoch losses and f1 scores
-    epoch_loss_avg /= len(train_loader)
-    epoch_f1score_distance /= len(train_loader)
-    epoch_f1score_occlusion /= len(train_loader)
+                predicted_occlusion_labels = torch.argmax(occ_train_pred, dim=1)
+                f1_occlusion = f1_score(labels[:, 1], predicted_occlusion_labels, average='weighted')
+                epoch_f1score_occlusion += f1_occlusion
 
-    # Save validation epoch losses and f1 scores
-    _, dis_val_pred, _, occ_val_pred = within_model(val)
-    dis_val_pred = torch.argmax(dis_val_pred, dim=1)
-    occ_val_pred = torch.argmax(occ_val_pred, dim=1)
-
-    print(f"Epoch {epoch + 1}/{epochs}, Loss: {epoch_loss_avg}, F1 Score Distance: {epoch_f1score_distance}, F1 Score Occlusion: {epoch_f1score_occlusion}")
-    print("Validation:  F1 Score Distance:", f1_score(y_val[:, 0], dis_val_pred, average='weighted'), ", F1 Score Occlusion:", f1_score(y_val[:, 1], occ_val_pred, average='weighted'))
+        if early_stop_dis and early_stop_occ:
+            break
 
 
+        # Save train epoch losses and f1 scores
+        epoch_loss_dis /= len(train_loader)
+        epoch_loss_occ /= len(train_loader)
+        epoch_f1score_distance /= len(train_loader)
+        epoch_f1score_occlusion /= len(train_loader)
 
-_, dis_test_pred, _, occ_test_pred = within_model(test)
-dis_test_pred = torch.argmax(dis_test_pred, dim=1)
-occ_test_pred = torch.argmax(occ_test_pred, dim=1)
-print("Test Distance F1 score:", f1_score(y_test[:, 0], dis_test_pred, average='weighted'), "\n")
-print("Test Occlusion F1 score:", f1_score(y_test[:, 1], occ_test_pred, average='weighted'), "\n")
-print("Distance CM \n", confusion_matrix(y_test[:, 0], dis_test_pred))
-print("Occlusion CM \n", confusion_matrix(y_test[:, 1], occ_test_pred))
+        distance_within_model.eval()
+        occlusion_within_model.eval()
+        # Save validation epoch losses and f1 scores
+        _, dis_val_pred = distance_within_model(val)
+        _, occ_val_pred = occlusion_within_model(val)
+        dis_val_pred = torch.argmax(dis_val_pred, dim=1)
+        occ_val_pred = torch.argmax(occ_val_pred, dim=1)
+
+        f1_dis_val = f1_score(y_val[:, 0], dis_val_pred, average='weighted')
+        f1_occ_val = f1_score(y_val[:, 1], occ_val_pred, average='weighted')
+
+        print(f"Epoch {epoch + 1}/{epochs}, Loss Distance: {epoch_loss_dis}, Loss Occlusion: {epoch_loss_occ}, F1 Score Distance: {epoch_f1score_distance}, F1 Score Occlusion: {epoch_f1score_occlusion}")
+        print("Validation:  F1 Score Distance:", f1_dis_val, ", F1 Score Occlusion:", f1_occ_val)
+
+        if f1_dis_val > best_f1_dis:
+            best_f1_dis = f1_dis_val
+            counter_dis = 0
+
+        else:
+            counter_dis += 1
+            if counter_dis >= patience:
+                early_stop_dis = True
+
+        if f1_occ_val > best_f1_occ:
+            best_f1_occ = f1_occ_val
+            counter_occ = 0
+
+        else:
+            counter_occ += 1
+            if counter_occ >= patience:
+                early_stop_occ = True
+
+
+    distance_within_model.eval()
+    occlusion_within_model.eval()
+    _, dis_test_pred = distance_within_model(test)
+    _, occ_test_pred = occlusion_within_model(test)
+    dis_test_pred = torch.argmax(dis_test_pred, dim=1)
+    occ_test_pred = torch.argmax(occ_test_pred, dim=1)
+    f1_dis = f1_score(y_test[:, 0], dis_test_pred, average='weighted')
+    f1_occ = f1_score(y_test[:, 1], occ_test_pred, average='weighted')
+    print("Test Distance F1 score:", f1_dis)
+    print("Test Occlusion F1 score:", f1_occ, "\n")
+    '''print("Distance CM \n", confusion_matrix(y_test[:, 0], dis_test_pred))
+    print("Occlusion CM \n", confusion_matrix(y_test[:, 1], occ_test_pred))'''
+    return f1_dis, f1_occ

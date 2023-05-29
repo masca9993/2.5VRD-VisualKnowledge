@@ -5,75 +5,74 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-from utils import prepare_dataset_across
+from utils import prepare_dataset_across, img_obj_dict, predict_across
 from sklearn.metrics import confusion_matrix
 
-learning_rate = 0.001
-batch_size = 32
-epochs = 300
 
-objects_across_train = pd.read_csv("visual_relationship/subset_data/across_images_objects_train.csv")
-vrd_across_train = pd.read_csv("visual_relationship/subset_data/across_images_vrd_train.csv")
-objects_across_validation = pd.read_csv("visual_relationship/subset_data/across_images_objects_validation.csv")
-vrd_across_validation = pd.read_csv("visual_relationship/subset_data/across_images_vrd_validation.csv")
-objects_across_test = pd.read_csv("visual_relationship/subset_data/across_images_objects_test.csv")
-vrd_across_test = pd.read_csv("visual_relationship/subset_data/across_images_vrd_test.csv")
 
-train, y_train, train_ids = prepare_dataset_across(vrd_across_train, objects_across_train)
-val, y_val, val_ids = prepare_dataset_across(vrd_across_validation, objects_across_validation)
-test, y_test, test_ids = prepare_dataset_across(vrd_across_test, objects_across_test)
+def run_acrossMLP(train, y_train,
+                    val, y_val,
+                    test, y_test):
 
-#Keep just the distance values
-y_train = y_train[:, 0]
-y_val = y_val[:, 0]
-y_test = y_test[:, 0]
 
-train_dataset = torch.utils.data.TensorDataset(train, y_train)
-train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    learning_rate = 0.001
+    batch_size = 32
+    epochs = 300
+    best_f1 = 0.0
+    patience = 20
+    counter = 0
 
-across_model = MLP_across(train.shape[1])
+    across_model = MLP_across(train.shape[1])
 
-loss_fn = nn.CrossEntropyLoss()
-optimizer = optim.Adam(across_model.parameters())
+    loss_fn = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(across_model.parameters())
 
-train_distance_f1scores = []
+    train_distance_f1scores = []
 
-# Perform the training loop
-for epoch in range(epochs):
-    epoch_loss_avg = 0.0
-    epoch_f1score_distance = 0.0
+    # Perform the training loop
+    for epoch in range(epochs):
+        epoch_loss_avg = 0.0
+        epoch_f1score_distance = 0.0
 
-    across_model.train()
+        across_model.train()
 
-    # Iterate over the training data in batches
-    for inputs, labels in train_loader:
         optimizer.zero_grad()
-
-        dis_logits, dis_train_pred = across_model(inputs)
-        loss = loss_fn(dis_logits, labels)
+        dis_logits, dis_train_pred = across_model(train)
+        loss = loss_fn(dis_train_pred, y_train)
 
         loss.backward()
         optimizer.step()
 
         # Track progress
-        epoch_loss_avg += loss.item()
+        epoch_loss = loss.item()
 
         predicted_distance_labels = torch.argmax(dis_train_pred, dim=1)
-        f1_distance = f1_score(labels, predicted_distance_labels, average='weighted')
-        epoch_f1score_distance += f1_distance
 
-    # Save train epoch losses and f1 scores
-    epoch_loss_avg /= len(train_loader)
-    epoch_f1score_distance /= len(train_loader)
+        epoch_f1score = f1_score(y_train, predicted_distance_labels, average='weighted')
 
-    # Save validation epoch losses and f1 scores
-    _, dis_val_pred= across_model(val)
-    dis_val_pred = torch.argmax(dis_val_pred, dim=1)
 
-    print(f"Epoch {epoch + 1}/{epochs}, Loss: {epoch_loss_avg}, F1 Score Distance: {epoch_f1score_distance}")
-    print("Validation:  F1 Score Distance:", f1_score(y_val, dis_val_pred, average='weighted'))
+        # Save validation epoch losses and f1 scores
+        _, dis_val_pred = across_model(val)
+        dis_val_pred = torch.argmax(dis_val_pred, dim=1)
+        f1_val = f1_score(y_val, dis_val_pred, average='weighted')
 
-_, dis_test_pred = across_model(test)
-dis_test_pred = torch.argmax(dis_test_pred, dim=1)
-print("Test Distance F1 score:", f1_score(y_test, dis_test_pred, average='weighted'), "\n")
-print("Distance CM \n", confusion_matrix(y_test, dis_test_pred))
+        print(f"Epoch {epoch + 1}/{epochs}, Loss: {epoch_loss}, F1 Score Distance: {epoch_f1score}")
+        print("Validation:  F1 Score Distance:", f1_val)
+
+        if f1_val > best_f1:
+            best_f1 = f1_val
+            counter = 0
+
+        else:
+            counter += 1
+            if counter >= patience:
+                print("Early stopping triggered. Training stopped.")
+                break
+
+    _, dis_test_pred = across_model(test)
+    dis_test_pred = torch.argmax(dis_test_pred, dim=1)
+    f1_test = f1_score(y_test, dis_test_pred, average='weighted')
+    print("Test Distance F1 score:", f1_test, "\n")
+    #print("Distance CM \n", confusion_matrix(y_test, dis_test_pred))
+
+    return f1_test

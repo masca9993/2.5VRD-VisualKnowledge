@@ -1,0 +1,7 @@
+D0,D1,D2,D3,O0,O1,O2,O3,Ymin,Int
+
+
+>
+>
+_:Int(x);D1(x)->O1(x)
+_:Int(x);D2(x)->O2(x)
