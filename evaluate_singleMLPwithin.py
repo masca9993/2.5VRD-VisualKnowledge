@@ -97,4 +97,6 @@ def run_singleMLPwithin(train, y_train, val, y_val, test, y_test):
     print("MLP Confusion matrix")
     print("Distance CM \n", confusion_matrix(y_test[:, 0], dis_test_pred))
     print("Occlusion CM \n", confusion_matrix(y_test[:, 1], occ_test_pred))
+
+    torch.save(within_model.state_dict(), "trained_within_model")
     return f1_dis, f1_occ

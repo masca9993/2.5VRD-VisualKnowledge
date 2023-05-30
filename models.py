@@ -43,22 +43,19 @@ class Kenn2(nn.Module):
         for _ in range(n_layers):
             self.kenn_layers.append(relational_parser(self.knowledge, boost_function=boost_function))
 
-    def forward(self, inputs: [torch.Tensor, ArrayLike, torch.Tensor, torch.Tensor], **kwargs):
+
+    def forward(self, inputs: [torch.Tensor, torch.Tensor], **kwargs):
         features = inputs[0]
-        relations = inputs[1]
-        sx = inputs[2]
-        sy = inputs[3]
+        intersections = inputs[1]
 
         d, _ = self.nn_d(features)
-        o, _ = self.nn_o(features)
+        o = torch.zeros([features.shape[0], 4])
 
         ymin_diff = features[:, 2] - features[:, -2]
-        intersection_mask = ((features[:, 0] <= features[:, 5]) & (features[:, 1] >= features[:, 4]) & (features[:, 2] <= features[:, -1]) & (features[:, 3] >= features[:, -2]))
-        intersection = torch.Tensor(intersection_mask * 10) - 5
-        z = torch.cat((d, o, torch.unsqueeze(ymin_diff, dim=1), torch.unsqueeze(intersection, dim=1)), 1)
+        z = torch.cat((d, o, torch.unsqueeze(ymin_diff, dim=1), torch.unsqueeze(intersections, dim=1)), 1)
 
         for ke in self.kenn_layers:
-            z, _ = ke(z, relations, sx, sy)
+            z, _ = ke(z, torch.Tensor([]), torch.Tensor([]), torch.Tensor([]))
 
         z = z[:, :-2]
         return z[:, :4], softmax(z[:, :4], dim=1), z[:, 4:], softmax(z[:, 4:], dim=1)

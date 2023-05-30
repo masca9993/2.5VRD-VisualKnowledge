@@ -1,10 +1,7 @@
 _unsureXY,_closerXY,_furtherXY,_unsureYZ,_closerYZ,_furtherYZ,_unsureXZ,_closerXZ,_furtherXZ
 
 
-_:_closerXZ(x),_furtherXZ(x)
-_:_closerYZ(x),_furtherYZ(x)
-_:_closerXY(x),_furtherXY(x)
 >
 >
-_:_furtherXY(x);n_closerXY(x);_furtherYZ(x);n_closerYZ(x)->_furtherXZ(x)
-_:_closerXY(x);n_furtherXY(x);_closerYZ(x);n_furtherYZ(x)->_closerXZ(x)
+_:_furtherXY(x);_furtherYZ(x)->_furtherXZ(x)
+_:_closerXY(x);_closerYZ(x)->_closerXZ(x)

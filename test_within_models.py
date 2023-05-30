@@ -1,5 +1,5 @@
 import pandas as pd
-from utils import prepare_dataset, prepare_dataset_across2_0, prepare_dataset_across, transitive_triplets_across, predict_across
+from utils import prepare_dataset, prepare_dataset_across2_0
 from evaluate_kenn import run_within_kenn
 from evaluate_MLPwithin import run_MLPwithin
 from evaluate_singleMLPwithin import run_singleMLPwithin
@@ -35,7 +35,8 @@ f1_occlusion_kenn = []
 for i in range(int(n_runs)):
     print("\n -Starting run: ", i)
     k_dis, k_occ = run_within_kenn(train_within, y_train_within, val_within, y_val_within, test_within, y_test_within)
-    mlp_dis, mlp_occ = run_singleMLPwithin(train_within, y_train_within, val_within, y_val_within, test_within, y_test_within)
+    mlp_dis, mlp_occ = run_singleMLPwithin(train_within, y_train_within, val_within,
+                                           y_val_within, test_within, y_test_within)
 
     f1_distance_kenn.append(k_dis)
     f1_occlusion_kenn.append(k_occ)

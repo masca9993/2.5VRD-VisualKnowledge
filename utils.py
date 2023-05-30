@@ -76,7 +76,6 @@ def prepare_dataset(vrd: pd.DataFrame, objects: pd.DataFrame):
         columns={"xmin": "xmin2", "xmax": "xmax2", "ymin": "ymin2", "ymax": "ymax2"}).drop(
         columns=['image_id', 'object_id', 'entity'])
 
-
     data = pd.concat([data, sym_data])
 
     y = data[["distance", "occlusion"]]

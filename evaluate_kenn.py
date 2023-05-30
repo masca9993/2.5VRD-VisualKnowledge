@@ -9,6 +9,17 @@ from utils import prepare_dataset
 from sklearn.metrics import confusion_matrix
 
 
+def calculate_intersection(box1, box2):
+    x1 = max(box1[0], box2[0])
+    y1 = max(box1[2], box2[2])
+    x2 = min(box1[1], box2[1])
+    y2 = min(box1[3], box2[3])
+    width = max(0, x2 - x1)
+    height = max(0, y2 - y1)
+    intersection_area = width * height
+    return intersection_area
+
+
 def run_within_kenn(train, y_train, val, y_val, test, y_test):
 
     learning_rate = 0.001
@@ -18,15 +29,54 @@ def run_within_kenn(train, y_train, val, y_val, test, y_test):
     patience = 10
     counter = 0
     early_stop = False
+    kenn_layers = 3
+    delta = 0.02
 
+
+    intersection_list = []
+    for box1, box2 in zip(train[:, :4], train[:, 4:]):
+        intersection_area = calculate_intersection(box1, box2)
+
+        if intersection_area > delta:
+            intersection_list.append(5)
+        else:
+            intersection_list.append(-5)
+    intersection_train = torch.Tensor(intersection_list)
+    train = torch.cat((train, torch.unsqueeze(intersection_train, dim=1)), 1)
+
+    intersection_list = []
+    for box1, box2 in zip(val[:, :4], val[:, 4:]):
+        intersection_area = calculate_intersection(box1, box2)
+
+        if intersection_area > delta:
+            intersection_list.append(5)
+        else:
+            intersection_list.append(-5)
+    intersection_val = torch.Tensor(intersection_list)
+
+    intersection_list = []
+    for box1, box2 in zip(test[:, :4], test[:, 4:]):
+        intersection_area = calculate_intersection(box1, box2)
+
+        if intersection_area > delta:
+            intersection_list.append(5)
+        else:
+            intersection_list.append(-5)
+    intersection_test = torch.Tensor(intersection_list)
     train_dataset = torch.utils.data.TensorDataset(train, y_train)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
     kenn_within_model = Kenn2("knowledge_within", train.shape[1],
-                              MLP_within2(train.shape[1]), MLP_within2(train.shape[1]), 4)
+                              MLP_within2(train.shape[1]-1), MLP_within2(train.shape[1]-1), kenn_layers)
 
     loss_fn = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(kenn_within_model.parameters())
+    parameters = list(kenn_within_model.parameters())
+    for i in range(kenn_layers):
+        parameters += list(kenn_within_model.kenn_layers[i].parameters())
+
+    optimizer = optim.Adam(parameters)
+
+    #optimizer = optim.Adam(kenn_within_model.parameters())
 
     train_distance_f1scores = []
     train_occlusion_f1scores = []
@@ -43,7 +93,9 @@ def run_within_kenn(train, y_train, val, y_val, test, y_test):
             for inputs, labels in train_loader:
                 optimizer.zero_grad()
 
-                dis_logits, dis_train_pred, occ_logits, occ_train_pred = kenn_within_model([inputs, torch.Tensor([]), torch.Tensor([]), torch.Tensor([])])
+                intersection_train = inputs[:, 8]
+
+                dis_logits, dis_train_pred, occ_logits, occ_train_pred = kenn_within_model([inputs[:, :8], intersection_train])
                 loss_distance = loss_fn(dis_logits, labels[:, 0])
                 loss_occlusion = loss_fn(occ_logits, labels[:, 1])
                 loss = loss_distance + loss_occlusion
@@ -71,7 +123,7 @@ def run_within_kenn(train, y_train, val, y_val, test, y_test):
         print(f"Epoch {epoch + 1}/{epochs}, Loss: {epoch_loss_avg}, F1 Score Distance: {epoch_f1score_distance}, F1 Score Occlusion: {epoch_f1score_occlusion}")
 
         kenn_within_model.eval()
-        _, dis_val_pred, _, occ_val_pred = kenn_within_model([val, torch.Tensor([]), torch.Tensor([]), torch.Tensor([])])
+        _, dis_val_pred, _, occ_val_pred = kenn_within_model([val, intersection_val])
         dis_val_pred = torch.argmax(dis_val_pred, dim=1)
         occ_val_pred = torch.argmax(occ_val_pred, dim=1)
         f1_dis = f1_score(y_val[:, 0], dis_val_pred, average='weighted')
@@ -89,7 +141,7 @@ def run_within_kenn(train, y_train, val, y_val, test, y_test):
                 early_stop = True
 
     kenn_within_model.eval()
-    _, dis_test_pred, _, occ_test_pred = kenn_within_model([test, torch.Tensor([]), torch.Tensor([]), torch.Tensor([])])
+    _, dis_test_pred, _, occ_test_pred = kenn_within_model([test, intersection_test])
     dis_test_pred = torch.argmax(dis_test_pred, dim=1)
     occ_test_pred = torch.argmax(occ_test_pred, dim=1)
     f1_dis = f1_score(y_test[:, 0], dis_test_pred, average='weighted')
@@ -99,7 +151,10 @@ def run_within_kenn(train, y_train, val, y_val, test, y_test):
     print("KENN Confusion matrix")
     print("Distance CM \n", confusion_matrix(y_test[:, 0], dis_test_pred))
     print("Occlusion CM \n", confusion_matrix(y_test[:, 1], occ_test_pred))
-    torch.save(kenn_within_model.state_dict(), "trained_within_model")
+
+    for name, param in kenn_within_model.kenn_layers[0].named_parameters():
+        if param.requires_grad:
+            print(name, param.data)
+    #torch.save(kenn_within_model.state_dict(), "trained_within_model")
 
     return f1_dis, f1_occ
-

@@ -22,11 +22,15 @@ def run_across_kenn(train, y_train, train_within,
     best_f1 = 0.0
     patience = 20
     counter = 0
+    kenn_layers = 5
 
-    kenn_across_model = Kenn_across("knowledge_across", train.shape[1], 5)
+    kenn_across_model = Kenn_across("knowledge_across", train.shape[1], kenn_layers)
 
     loss_fn = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(kenn_across_model.parameters())
+    parameters = list(kenn_across_model.parameters())
+    for i in range(kenn_layers):
+        parameters += list(kenn_across_model.kenn_layers[i].parameters())
+    optimizer = optim.Adam(parameters)
 
     train_distance_f1scores = []
     train_occlusion_f1scores = []
@@ -84,8 +88,12 @@ def run_across_kenn(train, y_train, train_within,
     dis_test_pred = torch.argmax(dis_test_pred, dim=1)
     f1_test = f1_score(y_test, dis_test_pred, average='weighted')
     print("Test Distance F1 score:", f1_test, "\n")
+    print("Distance CM \n", confusion_matrix(y_test, dis_test_pred))
+    for name, param in kenn_across_model.kenn_layers[0].named_parameters():
+        if param.requires_grad:
+            print(name, param.data)
+
     return f1_test
-    #print("Distance CM \n", confusion_matrix(y_test, dis_test_pred))
 
 
 

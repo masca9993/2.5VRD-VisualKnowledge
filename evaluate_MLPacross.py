@@ -73,6 +73,6 @@ def run_acrossMLP(train, y_train,
     dis_test_pred = torch.argmax(dis_test_pred, dim=1)
     f1_test = f1_score(y_test, dis_test_pred, average='weighted')
     print("Test Distance F1 score:", f1_test, "\n")
-    #print("Distance CM \n", confusion_matrix(y_test, dis_test_pred))
+    print("Distance CM \n", confusion_matrix(y_test, dis_test_pred))
 
     return f1_test
