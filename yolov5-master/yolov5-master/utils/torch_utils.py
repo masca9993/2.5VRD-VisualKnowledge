@@ -2,7 +2,6 @@
 """
 PyTorch utils
 """
-
 import math
 import os
 import platform
@@ -110,6 +109,8 @@ def select_device(device='', batch_size=0, newline=True):
     s = f'YOLOv5 🚀 {git_describe() or file_date()} Python-{platform.python_version()} torch-{torch.__version__} '
     device = str(device).strip().lower().replace('cuda:', '').replace('none', '')  # to string, 'cuda:0' to '0'
     cpu = device == 'cpu'
+    print(torch.cuda.is_available())
+    print(torch.cuda.device_count())
     mps = device == 'mps'  # Apple Metal Performance Shaders (MPS)
     if cpu or mps:
         os.environ['CUDA_VISIBLE_DEVICES'] = '-1'  # force torch.cuda.is_available() = False
