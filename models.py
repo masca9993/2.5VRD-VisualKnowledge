@@ -5,6 +5,7 @@ from torch.nn import Linear, Dropout
 from torch.nn.functional import softmax
 import numpy as np
 from numpy.typing import ArrayLike
+import torch.nn.functional as F
 
 # caution: path[0] is reserved for script path (or '' in REPL)
 sys.path.insert(1, '../KENN-Pytorch/')
@@ -201,4 +202,63 @@ class Kenn_across(MLP_across):
 
             return preactivations[within_predictions.shape[0]:], softmax(preactivations[within_predictions.shape[0]:],
                                                                          dim=1)
+
+
+class ImageEmbeddingCNN(nn.Module):
+    def __init__(self):
+        super(ImageEmbeddingCNN, self).__init__()
+        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, stride=1, padding=1)
+        self.avgpool1 = nn.AvgPool2d(kernel_size=4, stride=2)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)
+        self.avgpool2 = nn.AvgPool2d(kernel_size=3, stride=2)
+        self.fc1 = nn.Linear(710528 , 64)
+        self.fc2 = nn.Linear(710528 , 64)
+
+    def forward(self, x1, x2):  # Modify forward method to accept two input images
+        x1 = F.relu(self.conv1(x1))
+        x1 = self.avgpool1(x1)
+
+        x1 = F.relu(self.conv2(x1))
+        x1 = self.avgpool2(x1)
+
+        x1 = x1.view(x1.size(0), -1)
+        x1 = F.relu(self.fc1(x1))
+
+        x2 = F.relu(self.conv1(x2))
+        x2 = self.avgpool1(x2)
+        x2 = F.relu(self.conv2(x2))
+        x2 = self.avgpool2(x2)
+
+        x2 = x2.view(x2.size(0), -1)
+        x2 = F.relu(self.fc2(x2))
+
+        return torch.cat((x1, x2), dim=1)
+
+
+class MLP_SiftDepth(nn.Module):
+    def __init__(self, input_size, hidden_size, output_size):
+        super(MLP_SiftDepth, self).__init__()
+        self.fc1 = nn.Linear(input_size, hidden_size)
+        self.fc2 = nn.Linear(hidden_size, output_size)
+
+    def forward(self, x):
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
+        return x
+
+
+# Combined model
+class CombinedModel(nn.Module):
+    def __init__(self, cnn, mlp):
+        super(CombinedModel, self).__init__()
+        self.cnn = cnn
+        self.mlp = mlp
+
+    def forward(self, images, features):
+        embeddings = self.cnn(images[0], images[1])
+
+        inputs = torch.cat((embeddings, features), dim=1)
+        outputs = self.mlp(inputs)
+        return outputs[:, :4], softmax(outputs[:, :4], dim=1), outputs[:, 4:], softmax(outputs[:, 4:], dim=1)
+
 

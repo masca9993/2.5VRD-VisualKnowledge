@@ -60,6 +60,6 @@ def move_last_items_to_beginning(csv_file):
                 print(f"Created file: {filename} in {new_directory}")
 
 # Specify the CSV file path
-csv_file_path = 'visual_relationship/subset_data/within_image_objects_validation.csv'
+csv_file_path = 'visual_relationship/subset_data/within_image_objects_train.csv'
 
 move_last_items_to_beginning(csv_file_path)
