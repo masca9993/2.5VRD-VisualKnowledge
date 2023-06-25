@@ -207,30 +207,29 @@ class Kenn_across(MLP_across):
 class ImageEmbeddingCNN(nn.Module):
     def __init__(self):
         super(ImageEmbeddingCNN, self).__init__()
-        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, stride=1, padding=1)
-        self.avgpool1 = nn.AvgPool2d(kernel_size=4, stride=2)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)
+        self.avgpool1 = nn.AvgPool2d(kernel_size=3, stride=2)
+        self.conv1 = nn.Conv2d(1, 32, kernel_size=9, stride=4)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=9, stride=4)
         self.avgpool2 = nn.AvgPool2d(kernel_size=3, stride=2)
-        self.fc1 = nn.Linear(710528 , 64)
-        self.fc2 = nn.Linear(710528 , 64)
+        self.fc = nn.Linear(1536, 16)
 
     def forward(self, x1, x2):  # Modify forward method to accept two input images
-        x1 = F.relu(self.conv1(x1))
         x1 = self.avgpool1(x1)
+        x1 = F.relu(self.conv1(x1))
 
         x1 = F.relu(self.conv2(x1))
         x1 = self.avgpool2(x1)
 
         x1 = x1.view(x1.size(0), -1)
-        x1 = F.relu(self.fc1(x1))
+        x1 = F.relu(self.fc(x1))
 
-        x2 = F.relu(self.conv1(x2))
         x2 = self.avgpool1(x2)
+        x2 = F.relu(self.conv1(x2))
         x2 = F.relu(self.conv2(x2))
         x2 = self.avgpool2(x2)
 
         x2 = x2.view(x2.size(0), -1)
-        x2 = F.relu(self.fc2(x2))
+        x2 = F.relu(self.fc(x2))
 
         return torch.cat((x1, x2), dim=1)
 
@@ -239,10 +238,12 @@ class MLP_SiftDepth(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
         super(MLP_SiftDepth, self).__init__()
         self.fc1 = nn.Linear(input_size, hidden_size)
+        self.dropout = nn.Dropout(0.5)
         self.fc2 = nn.Linear(hidden_size, output_size)
 
     def forward(self, x):
         x = F.relu(self.fc1(x))
+        x = self.dropout(x)
         x = self.fc2(x)
         return x
 

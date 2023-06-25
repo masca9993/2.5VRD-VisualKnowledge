@@ -15,13 +15,13 @@ from sklearn.metrics import confusion_matrix
 combined_file_train = pd.read_csv("visual_relationship/subset_data/combined_file.csv")
 vrd_within_train = pd.read_csv("visual_relationship/subset_data/within_image_vrd_validation.csv")
 vrd_within_train = vrd_within_train[vrd_within_train['image_id_1'].isin(combined_file_train["image_id"].values)]
-objects_within_test = pd.read_csv("visual_relationship/subset_data/within_image_objects_test.csv")
-vrd_within_test = pd.read_csv("visual_relationship/subset_data/within_image_vrd_test.csv")
+combined_file_test = pd.read_csv("visual_relationship/subset_data/combined_file_test.csv")
+vrd_within_test = pd.read_csv("visual_relationship/subset_data/within_image_vrd_validation.csv")
+vrd_within_test = vrd_within_test[vrd_within_test['image_id_1'].isin(combined_file_test["image_id"].values)]
 
-objects_depth = pd.DataFrame(columns=["key", "depth_img"])
 
-max_height = 300
-max_width = 300
+objects_depth_train = pd.DataFrame(columns=["key", "depth_img"])
+objects_depth_test = pd.DataFrame(columns=["key", "depth_img"])
 
 
 for index, row in combined_file_train.iterrows():
@@ -35,21 +35,33 @@ for index, row in combined_file_train.iterrows():
     bb_image = np.zeros_like(depth_img)
     bb_image[y1:y2, x1:x2] = depth_img[y1:y2, x1:x2]
 
+    objects_depth_train = objects_depth_train.append({'key': row['image_id'] + "_" + str(row['object_id']), 'depth_img': bb_image}, ignore_index=True)
 
-    objects_depth = objects_depth.append({'key': row['image_id'] + "_" + str(row['object_id']), 'depth_img': bb_image}, ignore_index=True)
+for index, row in combined_file_test.iterrows():
+    image_path = os.path.join("visual_relationship/images/images_validation_depth/", row['image_id'] + ".jpg")
+    depth_img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)/255
+    height, width = depth_img.shape
+    x1 = int(width * row["xmin"])
+    x2 = int(width * row["xmax"])
+    y1 = int(height * row["ymin"])
+    y2 = int(height * row["ymax"])
+    bb_image = np.zeros_like(depth_img)
+    bb_image[y1:y2, x1:x2] = depth_img[y1:y2, x1:x2]
+
+    objects_depth_test = objects_depth_test.append({'key': row['image_id'] + "_" + str(row['object_id']), 'depth_img': bb_image}, ignore_index=True)
 
 '''images = objects_depth["depth_img"].to_numpy()
 objects_depth.drop('depth_img', axis=1, inplace=True)
 '''
 train_within, y_train_within, train_ids_within = prepare_dataset(vrd_within_train, combined_file_train)
-test_within, y_test_within, test_ids_within = prepare_dataset(vrd_within_test, objects_within_test)
+test_within, y_test_within, test_ids_within = prepare_dataset(vrd_within_test, combined_file_test)
 
 
 def run_MLPwithin(train, y_train, val, y_val, test, y_test):
 
     learning_rate = 0.001
     batch_size = 1
-    epochs = 40
+    epochs = 20
     best_f1_dis = 0.0
     best_f1_occ = 0.0
     patience = 10
@@ -87,8 +99,8 @@ def run_MLPwithin(train, y_train, val, y_val, test, y_test):
         if not early_stop:
             for mlp_input, object_ids, labels in zip(train, train_ids_within, y_train):
 
-                image_depth1 = torch.tensor(objects_depth[objects_depth["key"] == object_ids[0] + "_" + str(object_ids[1])]["depth_img"].values[0], dtype=torch.float32).to(device)
-                image_depth2 = torch.tensor(objects_depth[objects_depth["key"] == object_ids[2] + "_" + str(object_ids[3])]["depth_img"].values[0], dtype=torch.float32).to(device)
+                image_depth1 = torch.tensor(objects_depth_train[objects_depth_train["key"] == object_ids[0] + "_" + str(object_ids[1])]["depth_img"].values[0], dtype=torch.float32).to(device)
+                image_depth2 = torch.tensor(objects_depth_train[objects_depth_train["key"] == object_ids[2] + "_" + str(object_ids[3])]["depth_img"].values[0], dtype=torch.float32).to(device)
 
                 image_depth1 = image_depth1.unsqueeze(0).unsqueeze(0)
                 image_depth2 = image_depth2.unsqueeze(0).unsqueeze(0)
@@ -131,10 +143,10 @@ def run_MLPwithin(train, y_train, val, y_val, test, y_test):
         for mlp_input, object_ids, labels in zip(train, train_ids_within, y_train):
 
             image_depth1 = torch.tensor(
-                objects_depth[objects_depth["key"] == object_ids[0] + "_" + str(object_ids[1])]["depth_img"].values[0],
+                objects_depth_train[objects_depth_train["key"] == object_ids[0] + "_" + str(object_ids[1])]["depth_img"].values[0],
                 dtype=torch.float32).to(device)
             image_depth2 = torch.tensor(
-                objects_depth[objects_depth["key"] == object_ids[2] + "_" + str(object_ids[3])]["depth_img"].values[0],
+                objects_depth_train[objects_depth_train["key"] == object_ids[2] + "_" + str(object_ids[3])]["depth_img"].values[0],
                 dtype=torch.float32).to(device)
 
             image_depth1 = image_depth1.unsqueeze(0).unsqueeze(0)
@@ -142,6 +154,7 @@ def run_MLPwithin(train, y_train, val, y_val, test, y_test):
             mlp_input = mlp_input.unsqueeze(0)
 
             combined_model.eval()
+
             _, dis_val_pred, _, occ_val_pred = combined_model([image_depth1, image_depth2], mlp_input)
             dis_val_pred = torch.argmax(dis_val_pred, dim=1).item()
             occ_val_pred = torch.argmax(occ_val_pred, dim=1).item()
@@ -165,19 +178,43 @@ def run_MLPwithin(train, y_train, val, y_val, test, y_test):
             if counter >= patience:
                 early_stop = True'''
 
-    combined_model.eval()
-    _, dis_test_pred, _, occ_test_pred = combined_model(train)
-    dis_test_pred = torch.argmax(dis_test_pred, dim=1)
-    occ_test_pred = torch.argmax(occ_test_pred, dim=1)
-    f1_dis = f1_score(y_train[:, 0], dis_test_pred, average='weighted')
-    f1_occ = f1_score(y_train[:, 1], occ_test_pred, average='weighted')
-    print("Test Distance F1 score:", f1_dis, "\n")
-    print("Test Occlusion F1 score:", f1_occ, "\n")
+    dis_predictions_test = []
+    occ_predictions_test = []
+    test = test.to(device)
+
+    for mlp_input, object_ids, labels in zip(test, test_ids_within, y_test):
+        image_depth1 = torch.tensor(
+            objects_depth_test[objects_depth_test["key"] == object_ids[0] + "_" + str(object_ids[1])][
+                "depth_img"].values[0],
+            dtype=torch.float32).to(device)
+        image_depth2 = torch.tensor(
+            objects_depth_test[objects_depth_test["key"] == object_ids[2] + "_" + str(object_ids[3])][
+                "depth_img"].values[0],
+            dtype=torch.float32).to(device)
+
+        image_depth1 = image_depth1.unsqueeze(0).unsqueeze(0)
+        image_depth2 = image_depth2.unsqueeze(0).unsqueeze(0)
+        mlp_input = mlp_input.unsqueeze(0)
+
+        combined_model.eval()
+        _, dis_val_pred, _, occ_val_pred = combined_model([image_depth1, image_depth2], mlp_input)
+        dis_val_pred = torch.argmax(dis_val_pred, dim=1).item()
+        occ_val_pred = torch.argmax(occ_val_pred, dim=1).item()
+
+        dis_predictions_test.append(dis_val_pred)
+        occ_predictions_test.append(occ_val_pred)
+
+    f1_dis_test = f1_score(y_test[:, 0].cpu(), dis_predictions_test, average='weighted')
+    f1_occ_test = f1_score(y_test[:, 1].cpu(), occ_predictions_test, average='weighted')
+
+    print("Test Distance F1 score:", f1_dis_test, "\n")
+    print("Test Occlusion F1 score:", f1_occ_test, "\n")
     print("MLP Confusion matrix")
-    print("Distance CM \n", confusion_matrix(y_train[:, 0], dis_test_pred))
-    print("Occlusion CM \n", confusion_matrix(y_train[:, 1], occ_test_pred))
+    print("Distance CM \n", confusion_matrix(y_test[:, 0], dis_predictions_test))
+    print("Occlusion CM \n", confusion_matrix(y_test[:, 1], occ_predictions_test))
 
     #torch.save(combined_model.state_dict(), "trained_within_model")
-    return f1_dis, f1_occ
+    return f1_dis_test, f1_occ_test
 
-print(run_MLPwithin(train_within, y_train_within, None, None, None, None))
+for i in range(2):
+    run_MLPwithin(train_within, y_train_within, None, None, test_within, y_test_within)

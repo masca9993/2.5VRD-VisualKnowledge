@@ -34,7 +34,7 @@ parser.add_argument('--model', default='../nyu.h5', type=str, help='Trained Kera
 parser.add_argument('--input', default='../examples/*.jpg', type=str, help='Input filename or folder.')
 args = parser.parse_args()
 
-'''# Custom object needed for inference and training
+# Custom object needed for inference and training
 custom_objects = {'BilinearUpSampling2D': BilinearUpSampling2D, 'depth_loss_function': None}
 
 print('Loading model...')
@@ -127,10 +127,10 @@ for file in image_files:
   plt.imshow(output[0,0,:,:])
   plt.axis('off')
   plt.savefig(os.path.join(output_folder, file[-20:]), bbox_inches='tight', pad_inches=0)
-  torch.cuda.empty_cache()'''
+  torch.cuda.empty_cache()
 
 
-objects_df = pd.read_csv("../../visual_relationship/subset_data/combined_file.csv")
+'''objects_df = pd.read_csv("../../visual_relationship/subset_data/combined_file.csv")
 objects_df['depth_img']=None
 for index, row in objects_df.iterrows():
     image_path = os.path.join("../../visual_relationship/images/images_validation_depth/", row['image_id'] + ".jpg")
@@ -140,7 +140,7 @@ for index, row in objects_df.iterrows():
     x2 = int(width * row["xmax"])
     y1 = int(height * row["ymin"])
     y2 = int(height * row["ymax"])
-    objects_df.at[index, "depth_img"] = [depth_img[y1:y2, x1:x2]]
+    objects_df.at[index, "depth_img"] = [depth_img[y1:y2, x1:x2]]'''
 
 
 '''bounding_boxes = [[0.1221629977,0.3456149995,0.0881889984,0.3411940038],

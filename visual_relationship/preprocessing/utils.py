@@ -103,9 +103,27 @@ def resize_images(folder_path, target_size):
 
         resized_image.save(os.path.join("../images/images_validation_resized", file))
 
+def compare_folders(folder1, folder2, output_folder):
+    # Create the output folder if it doesn't exist
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+
+    # Get the list of files in each folder
+    files1 = set(os.listdir(folder1))
+    files2 = set(os.listdir(folder2))
+
+    # Find the files in the second folder that are not in the first folder
+    unique_files = files2 - files1
+
+    # Copy the unique files to the output folder
+    for file in unique_files:
+        src = os.path.join(folder2, file)
+        dst = os.path.join(output_folder, file)
+        shutil.copy2(src, dst)
 
 '''generate_image_list("validation")
 generate_image_list("test")
 create_data_subset()
 '''
-resize_images("../images/images_validation", (640, 480))
+#resize_images("../images/images_validation", (640, 480))
+compare_folders("../images/images_validation_depth", "../images/images_validation_resized", "../images/images_validation_missing")
