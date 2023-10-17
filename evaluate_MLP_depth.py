@@ -6,6 +6,7 @@ import torch.nn as nn
 import matplotlib
 import cv2
 import numpy as np
+import torchvision.transforms as transforms
 import os
 import torch.optim as optim
 from torch.utils.data import DataLoader
@@ -63,8 +64,14 @@ for index, row in combined_file_test.iterrows():
     combined_file_test.at[index, "depth_bottom_left"] = np.mean(bottom_left)
     combined_file_test.at[index, "depth_bottom_right"] = np.mean(bottom_right)
 
+
 train_within, y_train_within, train_ids_within = prepare_dataset(vrd_within_train, combined_file_train)
 test_within, y_test_within, test_ids_within = prepare_dataset(vrd_within_test, combined_file_test)
+mean = train_within.mean(axis=(0, 1))
+std = train_within.std(axis=(0, 1))
+normalize = transforms.Normalize(mean, std)
+train_within = normalize(train_within)
+test_within = normalize(test_within)
 
 combined_file_train = pd.read_csv("visual_relationship/subset_data/combined_file_test.csv")
 combined_file_train = combined_file_train.iloc[:, 0:7]
@@ -77,6 +84,11 @@ vrd_within_test = vrd_within_test[vrd_within_test['image_id_1'].isin(combined_fi
 
 train_bb, y_train_bb, train_ids_bb = prepare_dataset(vrd_within_train, combined_file_train)
 test_bb, y_test_bb, test_ids_bb = prepare_dataset(vrd_within_test, combined_file_test)
+mean = train_bb.mean(axis=(0, 1))
+std = train_bb.std(axis=(0, 1))
+normalize = transforms.Normalize(mean, std)
+train_bb = normalize(train_bb)
+test_bb = normalize(test_bb)
 
 def run_MLPwithin(train, y_train, val, y_val, test, y_test):
 

@@ -31,7 +31,7 @@ def within_relations_dict(comparison_ids, rel_dict):
     return within_rel_dict
 
 
-def prepare_dataset(vrd: pd.DataFrame, objects: pd.DataFrame):
+def prepare_dataset(vrd: pd.DataFrame, objects: pd.DataFrame, pct=1):
 
     vrd_1 = vrd.merge(objects, how="left",
                       left_on=["image_id_1", "object_id_1"],
@@ -76,7 +76,7 @@ def prepare_dataset(vrd: pd.DataFrame, objects: pd.DataFrame):
         columns={"xmin": "xmin2", "xmax": "xmax2", "ymin": "ymin2", "ymax": "ymax2"}).drop(
         columns=['image_id', 'object_id', 'entity'])
 
-    data = pd.concat([data, sym_data])
+    data = pd.concat([data, sym_data]).sample(frac = pct)
 
     y = data[["distance", "occlusion"]]
     data.drop(columns=["raw_distance", "raw_occlusion", "distance", "occlusion"], inplace=True)

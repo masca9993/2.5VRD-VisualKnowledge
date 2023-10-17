@@ -1,0 +1,7 @@
+D0,D1,D2,D3,O0,O1,O2,O3,Ymin,Int
+
+
+_:nInt(x),nD1(x),O1(x)
+_:nInt(x),nD2(x),O2(x)
+_:nInt(x),nD3(x),O3(x)
+_:Int(x),O0(x)

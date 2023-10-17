@@ -34,7 +34,7 @@ class MLP_within2(nn.Module):
 
 class Kenn2(nn.Module):
 
-    def __init__(self, knowledge_file: str, input_shape: int, nnDistance, nnOcclusion, n_layers: int, boost_function=GodelBoostResiduumApprox):
+    def __init__(self, knowledge_file: str, input_shape: int, nnDistance, nnOcclusion, n_layers: int):
         super(Kenn2, self).__init__()
         self.knowledge = knowledge_file
         self.kenn_layers = []
@@ -42,7 +42,7 @@ class Kenn2(nn.Module):
         self.nn_o = nnOcclusion
 
         for _ in range(n_layers):
-            self.kenn_layers.append(relational_parser(self.knowledge, boost_function=boost_function))
+            self.kenn_layers.append(relational_parser(self.knowledge))
 
 
     def forward(self, inputs: [torch.Tensor, torch.Tensor], **kwargs):

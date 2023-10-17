@@ -1,6 +1,8 @@
 import pandas as pd
 from utils import prepare_dataset, prepare_dataset_across2_0
 from evaluate_kenn import run_within_kenn
+from evaluate_kenn_material import run_within_kenn_material
+
 from evaluate_MLPwithin import run_MLPwithin
 from evaluate_singleMLPwithin import run_singleMLPwithin
 from scipy.stats import ttest_ind

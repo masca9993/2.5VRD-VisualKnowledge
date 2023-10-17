@@ -20,7 +20,7 @@ def calculate_intersection(box1, box2):
     return intersection_area
 
 
-def run_within_kenn(train, y_train, val, y_val, test, y_test):
+def run_within_kenn_material(train, y_train, val, y_val, test, y_test):
 
     learning_rate = 0.001
     batch_size = 250
@@ -66,7 +66,7 @@ def run_within_kenn(train, y_train, val, y_val, test, y_test):
     train_dataset = torch.utils.data.TensorDataset(train, y_train)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
-    kenn_within_model = Kenn2("knowledge_within", train.shape[1],
+    kenn_within_model = Kenn2("knowledge_material", train.shape[1],
                               MLP_within2(train.shape[1]-1), MLP_within2(train.shape[1]-1), kenn_layers)
 
     loss_fn = nn.CrossEntropyLoss()
@@ -152,5 +152,9 @@ def run_within_kenn(train, y_train, val, y_val, test, y_test):
     print("Distance CM \n", confusion_matrix(y_test[:, 0], dis_test_pred))
     print("Occlusion CM \n", confusion_matrix(y_test[:, 1], occ_test_pred))
 
+    for name, param in kenn_within_model.kenn_layers[0].named_parameters():
+        if param.requires_grad:
+            print(name, param.data)
+    #torch.save(kenn_within_model.state_dict(), "trained_within_model")
 
     return f1_dis, f1_occ

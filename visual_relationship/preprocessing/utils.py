@@ -121,9 +121,7 @@ def compare_folders(folder1, folder2, output_folder):
         dst = os.path.join(output_folder, file)
         shutil.copy2(src, dst)
 
-'''generate_image_list("validation")
+generate_image_list("validation")
 generate_image_list("test")
 create_data_subset()
-'''
-#resize_images("../images/images_validation", (640, 480))
-compare_folders("../images/images_validation_depth", "../images/images_validation_resized", "../images/images_validation_missing")
+

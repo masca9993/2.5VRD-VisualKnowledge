@@ -12,11 +12,11 @@ from torch.utils.data import DataLoader
 from utils import prepare_dataset
 from sklearn.metrics import confusion_matrix
 
-combined_file_train = pd.read_csv("visual_relationship/subset_data/combined_file_test.csv")
+combined_file_train = pd.read_csv("visual_relationship/subset_data/combined_file.csv")
 combined_file_train = combined_file_train.iloc[:, 0:7]
 vrd_within_train = pd.read_csv("visual_relationship/subset_data/within_image_vrd_validation.csv")
 vrd_within_train = vrd_within_train[vrd_within_train['image_id_1'].isin(combined_file_train["image_id"].values)]
-combined_file_test = pd.read_csv("visual_relationship/subset_data/combined_file.csv")
+combined_file_test = pd.read_csv("visual_relationship/subset_data/combined_file_test.csv")
 combined_file_test = combined_file_test.iloc[:, 0:7]
 vrd_within_test = pd.read_csv("visual_relationship/subset_data/within_image_vrd_validation.csv")
 vrd_within_test = vrd_within_test[vrd_within_test['image_id_1'].isin(combined_file_test["image_id"].values)]
@@ -58,7 +58,7 @@ test_within, y_test_within, test_ids_within = prepare_dataset(vrd_within_test, c
 
 def run_MLPwithin(train, y_train, val, y_val, test, y_test):
 
-    learning_rate = 0.01
+    learning_rate = 0.001
     batch_size = 1
     epochs = 40
     best_f1_dis = 0.0

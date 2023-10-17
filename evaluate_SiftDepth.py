@@ -216,5 +216,5 @@ def run_MLPwithin(train, y_train, val, y_val, test, y_test):
     #torch.save(combined_model.state_dict(), "trained_within_model")
     return f1_dis_test, f1_occ_test
 
-for i in range(2):
+for i in range(1):
     run_MLPwithin(train_within, y_train_within, None, None, test_within, y_test_within)
