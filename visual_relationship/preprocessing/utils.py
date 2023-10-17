@@ -3,6 +3,7 @@ import os
 import shutil
 import random
 import subprocess
+from PIL import Image
 
 # generate list containing the images id to download using downloader.py
 def generate_image_list(type_csv: str, train_pct=1.0):
@@ -60,7 +61,6 @@ def create_data_subset():
     keep_list = os.listdir("../images/images_train")
     keep_list = [f.split('.')[0] for f in keep_list]
 
-    # remove rows where City is in the list of cities to remove
     within_image_objects_train = within_image_objects_train[within_image_objects_train['image_id'].isin(keep_list)]
     across_images_objects_train = across_images_objects_train[across_images_objects_train['image_id'].isin(keep_list)]
     within_image_vrd_train = within_image_vrd_train[within_image_vrd_train['image_id_1'].isin(keep_list)]
@@ -83,9 +83,45 @@ def create_data_subset():
             shutil.copy("../2.5VRD_data/" + csv_file, folder_path)
 
 
-'''
-generate_image_list("train", 0.1)
+def resize_images(folder_path, target_size):
+    # Ottieni la lista di file nella cartella
+    files = os.listdir(folder_path)
+    for file in files:
+        file_path = os.path.join(folder_path, file)
+
+        # Carica l'immagine utilizzando Pillow
+        image = Image.open(file_path)
+
+        if image.mode == 'L':
+            # Trasforma l'immagine in RGB
+            image = image.convert('RGB')
+
+        # Ridimensiona l'immagine alla dimensione target
+        resized_image = image.resize(target_size)
+
+        # Salva l'immagine ridimensionata sovrascrivendo il file originale
+
+        resized_image.save(os.path.join("../images/images_validation_resized", file))
+
+def compare_folders(folder1, folder2, output_folder):
+    # Create the output folder if it doesn't exist
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+
+    # Get the list of files in each folder
+    files1 = set(os.listdir(folder1))
+    files2 = set(os.listdir(folder2))
+
+    # Find the files in the second folder that are not in the first folder
+    unique_files = files2 - files1
+
+    # Copy the unique files to the output folder
+    for file in unique_files:
+        src = os.path.join(folder2, file)
+        dst = os.path.join(output_folder, file)
+        shutil.copy2(src, dst)
+
 generate_image_list("validation")
 generate_image_list("test")
 create_data_subset()
-'''
+

@@ -1,0 +1,7 @@
+_unsureXY,_closerXY,_furtherXY,_unsureYZ,_closerYZ,_furtherYZ,_unsureXZ,_closerXZ,_furtherXZ
+
+
+>
+>
+_:_furtherXY(x);_furtherYZ(x)->_furtherXZ(x)
+_:_closerXY(x);_closerYZ(x)->_closerXZ(x)
